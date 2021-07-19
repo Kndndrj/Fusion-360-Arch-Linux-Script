@@ -10,10 +10,12 @@
 ## Get wineprefix                                        ##
 ###########################################################
 INSTALLDIR="$HOME/.fusion360"
+TEMPDIR="$INSTALLDIR/tmp/"
 printf "default installation directory: $INSTALLDIR\n"
 
 #Make wine prefix directory
 mkdir -p $INSTALLDIR
+mkdir $TEMPDIR
 
 ###########################################################
 ## Perform a System update and install prerequisites     ##
@@ -23,14 +25,12 @@ sudo pacman -Syyu wine wine-gecko wine-mono p7zip git curl wget
 if [ $? -ne 0 ]; then
   printf "Required packages could not be installed!\n"
   printf "Please make sure that you have enabled the \"multilib\" repository for pacman!\n"
-  printf "To do this, uncomment the following lines in \"/etc/pacman.conf\":"
+  printf "To do this, uncomment the following lines in \"/etc/pacman.conf\":\n"
   printf "\t[multilib]\n"
-  printf "\tInclude = /etc/pacman.d/mirrorlist\n"
+  printf "\tInclude = /etc/pacman.d/mirrorlist\n\n"
   exit 1
 fi
 
-TEMPDIR="$INSTALLDIR/tmp/"
-mkdir $TEMPDIR
 wget -P "$TEMPDIR" "https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks"
 chmod a+x $TEMPDIR/winetricks
 
@@ -39,9 +39,6 @@ chmod a+x $TEMPDIR/winetricks
 ###########################################################
 echo "Now populating new wineprefix with the required prerequisites"
 WINEPREFIX=$INSTALLDIR $TEMPDIR/winetricks atmlib gdiplus msxml3 msxml6 vcrun2017 corefonts fontsmooth=rgb winhttp win10
-echo
-echo
-echo
 
 # Get the latest release of "dxvk"
 DXVK_INFO=$(curl --silent "https://api.github.com/repos/doitsujin/dxvk/releases/latest")
@@ -49,22 +46,26 @@ DXVK_TAG=$(printf "${DXVK_INFO}\n" | grep -E "\"tag_name\":" | sed -E "s/.*\"([^
 DXVK_DLNAME=$(printf "${DXVK_INFO}\n" | grep -E "\"name\":.*\.tar\.gz" | sed -E "s/.*\"([^\"]+)\".*/\1/")
 DXVK_LINK="https://github.com/doitsujin/dxvk/releases/download/${DXVK_TAG}/${DXVK_DLNAME}"
 
-wget -O "$TEMPDIR/DXVK.tar.gz" "${DXVK_LINK}"
-tar xvzf $TEMPDIR/DXVK.tar.gz -C $TEMPDIR
-cd $TEMPDIR/dxvk*/
-WINEPREFIX=$INSTALLDIR ./setup_dxvk.sh install
+wget -O "$TEMPDIR/DXVK.tar.gz" "$DXVK_LINK"
+tar xvzf "$TEMPDIR/DXVK.tar.gz" -C "$TEMPDIR"
+
+# Install "dxvk" in our wineprefix
+WINEPREFIX=$INSTALLDIR $TEMPDIR/dxvk*/setup_dxvk.sh install
 
 ###########################################################
 ## Install Fusion 360                                    ##
 ###########################################################
 echo "NOW INSTALLING FUSION 360!!!"
+# Download the installer
 wget -P $TEMPDIR https://dl.appstreaming.autodesk.com/production/installers/Fusion%20360%20Admin%20Install.exe
+# Unzip to setup directory
 7z x -o$TEMPDIR/setup/ "$TEMPDIR/Fusion 360 Admin Install.exe"
+# 
 curl -Lo $TEMPDIR/setup/platform.py https://github.com/python/cpython/raw/3.5/Lib/platform.py
-cd $TEMPDIR
-sed -i 's/winver._platform_version or //' setup/platform.py	
-WINEPREFIX=$INSTALLDIR wine setup/streamer.exe -p deploy -g -f log.txt --quiet
-rm -r $TEMPDIR
+sed -i "s/winver._platform_version or //" $TEMPDIR/setup/platform.py	
+
+WINEPREFIX=$INSTALLDIR wine $TEMPDIR/setup/streamer.exe -p deploy -g -f log.txt --quiet
+#rm -r $TEMPDIR
 
 ###########################################################
 ## Create Fusion 360 launching script                    ##
