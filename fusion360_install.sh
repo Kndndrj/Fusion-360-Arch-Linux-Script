@@ -1,12 +1,14 @@
 #!/bin/bash
 
-echo "This short script will help you install Autodesk Fusion 360 on your Arch based Linux distribution"
-echo "Forked from https://github.com/link12765/Fusion-360-Arch-Linux-Script"
-echo "Original Author: Dylan Dean Goebel - Contact: goebeld @ https://www.reddit.com/user/goebeld"
-echo
-echo "Modified by Andrej Kenda"
+# This short script will help you install Autodesk Fusion 360 on your Arch based Linux distribution
+# Forked from https://github.com/link12765/Fusion-360-Arch-Linux-Script
+# Original Author: Dylan Dean Goebel - Contact: goebeld @ https://www.reddit.com/user/goebeld
+# 
+# Modified by Andrej Kenda (Kndndrj)
 
-#Get wineprefix
+###########################################################
+## Get wineprefix                                        ##
+###########################################################
 INSTALLDIR="$HOME/.fusion360"
 echo 
 echo 
@@ -18,7 +20,9 @@ echo
 #Make wine prefix directory
 mkdir -p $INSTALLDIR
 
-#Perform a System update and install prerequisites
+###########################################################
+## Perform a System update and install prerequisites     ##
+###########################################################
 echo
 echo
 echo "Now updating system and installing prerequisites"
@@ -31,22 +35,29 @@ cd
 echo 
 echo
 
-#Install wineprefix prerequisites
+###########################################################
+## Install wineprefix prerequisites                      ##
+###########################################################
 echo "Now populating new wineprefix with the required prerequisites"
 WINEPREFIX=$INSTALLDIR $INSTALLDIR/tmp/winetricks atmlib gdiplus msxml3 msxml6 vcrun2017 corefonts fontsmooth=rgb winhttp win10
-echo 
 echo
 echo
-echo "***IMPORTANT*** Please provide the .tar.gz download link for the most recent dxvk release from here: https://github.com/doitsujin/dxvk/releases"
-read -e -i "$DXVK" -p "Provide the download link here: " INPUT
-DXVK="$INPUT"
-echo $DXVK
+echo
+
+# Get the latest release of "dxvk"
+dxvk_info=$(curl --silent "https://api.github.com/repos/doitsujin/dxvk/releases/latest")
+dxvk_tag=$(printf "${dxvk_info}\n" | grep -E "\"tag_name\":" | sed -E "s/.*\"([^\"]+)\".*/\1/")
+dxvk_dlname=$(printf "${dxvk_info}\n" | grep -E "\"name\":.*\.tar\.gz" | sed -E "s/.*\"([^\"]+)\".*/\1/")
+DXVK="https://github.com/doitsujin/dxvk/releases/download/${dxvk_tag}/${dxvk_dlname}"
+
 wget -O $INSTALLDIR/tmp/DXVK.tar.gz $DXVK
 tar xvzf ~/.test/tmp/DXVK.tar.gz -C ~/.test/tmp/
 cd $INSTALLDIR/tmp/dxvk*/
 WINEPREFIX=$INSTALLDIR ./setup_dxvk.sh install
 
-#Install Fusion 360
+###########################################################
+## Install Fusion 360                                    ##
+###########################################################
 echo "NOW INSTALLING FUSION 360!!!"
 wget -P $INSTALLDIR/tmp https://dl.appstreaming.autodesk.com/production/installers/Fusion%20360%20Admin%20Install.exe
 7z x -o$INSTALLDIR/tmp/setup/ "$INSTALLDIR/tmp/Fusion 360 Admin Install.exe"
@@ -56,7 +67,9 @@ sed -i 's/winver._platform_version or //' setup/platform.py
 WINEPREFIX=$INSTALLDIR wine setup/streamer.exe -p deploy -g -f log.txt --quiet
 rm -r $INSTALLDIR/tmp/
 
-#Create Fusion 360 launching script
+###########################################################
+## Create Fusion 360 launching script                    ##
+###########################################################
 echo "env WINEPREFIX='$INSTALLDIR' wine C:\\windows\\command\\start.exe /Unix /$HOME/.fusion360/dosdevices/c:/ProgramData/Microsoft/Windows/Start\ Menu/Programs/Autodesk/Autodesk\ Fusion\ 360.lnk" > $INSTALLDIR/fusion360
 echo "#Sometimes the first command doesn't work and you need to launch it with this one:" >> $INSTALLDIR/fusion360
 echo "#env WINEPREFIX='$INSTALLDIR' wine '$INSTALLDIR/drive_c/Program Files/Autodesk/webdeploy/production/6a0c9611291d45bb9226980209917c3d/FusionLauncher.exe'" >> $INSTALLDIR/fusion360
