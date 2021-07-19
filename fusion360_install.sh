@@ -10,12 +10,7 @@
 ## Get wineprefix                                        ##
 ###########################################################
 INSTALLDIR="$HOME/.fusion360"
-echo 
-echo 
-read -e -i "$INSTALLDIR" -p "Enter the prefered wineprefix location for Fusion 360 (must be a new prefix): " INPUT
-INSTALLDIR="$INPUT"
-echo
-echo
+printf "default installation directory: $INSTALLDIR\n"
 
 #Make wine prefix directory
 mkdir -p $INSTALLDIR
@@ -23,49 +18,53 @@ mkdir -p $INSTALLDIR
 ###########################################################
 ## Perform a System update and install prerequisites     ##
 ###########################################################
-echo
-echo
 echo "Now updating system and installing prerequisites"
-sudo pacman -Syu wine wine-gecko wine-mono p7zip git curl
-mkdir $INSTALLDIR/tmp
-cd $INSTALLDIR/tmp
-wget https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
-chmod a+x winetricks
-cd
-echo 
-echo
+sudo pacman -Syyu wine wine-gecko wine-mono p7zip git curl wget
+if [ $? -ne 0 ]; then
+  printf "Required packages could not be installed!\n"
+  printf "Please make sure that you have enabled the \"multilib\" repository for pacman!\n"
+  printf "To do this, uncomment the following lines in \"/etc/pacman.conf\":"
+  printf "\t[multilib]\n"
+  printf "\tInclude = /etc/pacman.d/mirrorlist\n"
+  exit 1
+fi
+
+TEMPDIR="$INSTALLDIR/tmp/"
+mkdir $TEMPDIR
+wget -P "$TEMPDIR" "https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks"
+chmod a+x $TEMPDIR/winetricks
 
 ###########################################################
 ## Install wineprefix prerequisites                      ##
 ###########################################################
 echo "Now populating new wineprefix with the required prerequisites"
-WINEPREFIX=$INSTALLDIR $INSTALLDIR/tmp/winetricks atmlib gdiplus msxml3 msxml6 vcrun2017 corefonts fontsmooth=rgb winhttp win10
+WINEPREFIX=$INSTALLDIR $TEMPDIR/winetricks atmlib gdiplus msxml3 msxml6 vcrun2017 corefonts fontsmooth=rgb winhttp win10
 echo
 echo
 echo
 
 # Get the latest release of "dxvk"
-dxvk_info=$(curl --silent "https://api.github.com/repos/doitsujin/dxvk/releases/latest")
-dxvk_tag=$(printf "${dxvk_info}\n" | grep -E "\"tag_name\":" | sed -E "s/.*\"([^\"]+)\".*/\1/")
-dxvk_dlname=$(printf "${dxvk_info}\n" | grep -E "\"name\":.*\.tar\.gz" | sed -E "s/.*\"([^\"]+)\".*/\1/")
-DXVK="https://github.com/doitsujin/dxvk/releases/download/${dxvk_tag}/${dxvk_dlname}"
+DXVK_INFO=$(curl --silent "https://api.github.com/repos/doitsujin/dxvk/releases/latest")
+DXVK_TAG=$(printf "${DXVK_INFO}\n" | grep -E "\"tag_name\":" | sed -E "s/.*\"([^\"]+)\".*/\1/")
+DXVK_DLNAME=$(printf "${DXVK_INFO}\n" | grep -E "\"name\":.*\.tar\.gz" | sed -E "s/.*\"([^\"]+)\".*/\1/")
+DXVK_LINK="https://github.com/doitsujin/dxvk/releases/download/${DXVK_TAG}/${DXVK_DLNAME}"
 
-wget -O $INSTALLDIR/tmp/DXVK.tar.gz $DXVK
-tar xvzf ~/.test/tmp/DXVK.tar.gz -C ~/.test/tmp/
-cd $INSTALLDIR/tmp/dxvk*/
+wget -O "$TEMPDIR/DXVK.tar.gz" "${DXVK_LINK}"
+tar xvzf $TEMPDIR/DXVK.tar.gz -C $TEMPDIR
+cd $TEMPDIR/dxvk*/
 WINEPREFIX=$INSTALLDIR ./setup_dxvk.sh install
 
 ###########################################################
 ## Install Fusion 360                                    ##
 ###########################################################
 echo "NOW INSTALLING FUSION 360!!!"
-wget -P $INSTALLDIR/tmp https://dl.appstreaming.autodesk.com/production/installers/Fusion%20360%20Admin%20Install.exe
-7z x -o$INSTALLDIR/tmp/setup/ "$INSTALLDIR/tmp/Fusion 360 Admin Install.exe"
-curl -Lo $INSTALLDIR/tmp/setup/platform.py https://github.com/python/cpython/raw/3.5/Lib/platform.py
-cd $INSTALLDIR/tmp/
+wget -P $TEMPDIR https://dl.appstreaming.autodesk.com/production/installers/Fusion%20360%20Admin%20Install.exe
+7z x -o$TEMPDIR/setup/ "$TEMPDIR/Fusion 360 Admin Install.exe"
+curl -Lo $TEMPDIR/setup/platform.py https://github.com/python/cpython/raw/3.5/Lib/platform.py
+cd $TEMPDIR
 sed -i 's/winver._platform_version or //' setup/platform.py	
 WINEPREFIX=$INSTALLDIR wine setup/streamer.exe -p deploy -g -f log.txt --quiet
-rm -r $INSTALLDIR/tmp/
+rm -r $TEMPDIR
 
 ###########################################################
 ## Create Fusion 360 launching script                    ##
@@ -83,4 +82,3 @@ echo "The first launch of the application is usually laggy when signing in, just
 echo "Quirk: Sometimes the Fusion 360 logo gets stuck in the work area after launching. To fix this, set your Graphics mode to OpenGL and restart"
 echo 
 echo	
-#EOF
