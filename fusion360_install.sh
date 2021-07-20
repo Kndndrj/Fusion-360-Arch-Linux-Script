@@ -28,7 +28,7 @@ FAIL_MESSAGE="${RED}Installation failed!${NC}\n\
 ###########################################################
 ## Parse Arguments                                       ##
 ###########################################################
-while getopts ":p:t:ch" option; do
+while getopts ":p:t:chl:" option; do
   case "${option}" in
     p) 
       INSTALLDIR=${OPTARG};;
@@ -39,6 +39,8 @@ while getopts ":p:t:ch" option; do
     h)
       printf "${USAGE}\n"
       exit;;
+    l)
+      LOGDIR=${OPTARG};;
     :)
       printf "${RED}Error${NC}: Option \"-${OPTARG}\" requires an argument.\nUsage:\n${USAGE}\n"
       exit 1;;
@@ -54,11 +56,15 @@ done
 # Check for $INSTALLDIR and $TEMPDIR, use defaults if not specified
 if [ -z "$INSTALLDIR" ]; then
   INSTALLDIR="$HOME/.local/share/fusion360"
-  printf "${BROWN}Warning${NC}: No Prefix directory specified. The default \"$INSTALLDIR\" will be used.\n"
+  printf "No Prefix directory specified. The default \"$INSTALLDIR\" will be used.\n"
 fi
 if [ -z "$TEMPDIR" ]; then
   TEMPDIR="$HOME/.local/share/fusion360_temp/"
-  printf "${BROWN}Warning${NC}: No Temp directory specified. The default \"$TEMPDIR\" will be used.\n"
+  printf "No Temp directory specified. The default \"$TEMPDIR\" will be used.\n"
+fi
+if [ -z "$LOGDIR" ]; then
+  LOGDIR="$TEMPDIR/logs"
+  printf "No Log directory specified. The default \"$LOGDIR\" will be used.\n"
 fi
 
 # Clean install procedure
@@ -81,8 +87,9 @@ if [ -d "$INSTALLDIR" ]; then
   fi
 fi
 
-# Make temporary directory
+# Make the required directories
 mkdir -p $TEMPDIR
+mkdir -p $LOGDIR
 
 ###########################################################
 ## System Update and Install Prerequisites               ##
@@ -112,7 +119,8 @@ fi
 
 # Run winetricks (automatically makes a prefix in $INSTALLDIR)
 printf "\n${GREEN}Running Winetricks!${NC}\n\n"
-WINEPREFIX=$INSTALLDIR $TEMPDIR/winetricks atmlib gdiplus msxml3 msxml6 vcrun2017 corefonts fontsmooth=rgb winhttp win10
+WINEPREFIX=$INSTALLDIR $TEMPDIR/winetricks atmlib gdiplus msxml3 msxml6 vcrun2017 corefonts fontsmooth=rgb \
+                                           winhttp win10 | tee $LOGDIR/winetricks_setup.log
 if [ $? -ne 0 ]; then
   printf "$FAIL_MESSAGE"
   exit 1
@@ -140,7 +148,7 @@ fi
 
 # Install "DXVK" in the wineprefix
 printf "\n${GREEN}Installing DXVK!${NC}\n\n"
-WINEPREFIX=$INSTALLDIR $TEMPDIR/dxvk_extracted/setup_dxvk.sh install
+WINEPREFIX=$INSTALLDIR $TEMPDIR/dxvk_extracted/setup_dxvk.sh install | tee $LOGDIR/dxvk_setup.log
 if [ $? -ne 0 ]; then
   printf "$FAIL_MESSAGE"
   exit 1
@@ -161,7 +169,7 @@ fi
 
 # Install Fusion 360
 printf "\n${GREEN}Installing Fusion 360!${NC}\n\n"
-WINEPREFIX=$INSTALLDIR wine $TEMPDIR/setup/streamer.exe -p deploy -g -f $INSTALLDIR/fusion360.log --quiet
+WINEPREFIX=$INSTALLDIR wine $TEMPDIR/setup/streamer.exe -p deploy -g -f $LOGDIR/fusion360_setup.log --quiet
 if [ $? -ne 0 ]; then
   printf "$FAIL_MESSAGE"
   exit 1
@@ -188,9 +196,10 @@ printf "If you are having trouble with this app launcher, just open the file wit
 printf "\n\n"
 printf "The first launch of the application is usually laggy when signing in, just be patient and it will work!\n"
 printf "${BROWN}Quirk${NC}: Sometimes the Fusion 360 logo gets stuck in the work area after launching,\n"
-printf "to fix this, set your Graphics mode to OpenGL (User icon >> Preferences >> General >> Graphics driver) and restart the program.\n"
+printf "       to fix this, set your Graphics mode to OpenGL (User icon >> Preferences >> General >> Graphics driver) and restart the program.\n"
 printf "\n\n"
 
+# Removing temporary directory
 printf "One more thing. If the installation didn't go according to plan, you don't have to download all the files again if you keep the temporary directory.\n"
 printf "Do you want to keep it (\"$TEMPDIR\")? [y/N] "
 read answer
