@@ -14,11 +14,12 @@ GREEN="\033[1;32m"
 BROWN="\033[1;33m"
 BLUE="\033[1;34m"
 NC="\033[0m"
-USAGE="$0 [-p <wine_prefix>] [-t <temp_dir>] [-c] [-h]\n\
+USAGE="$0 [-p <wine_prefix>] [-t <temp_dir>] [-c] [-h] [-l <logfile>]\n\
   -p wine_prefix  -- Path to directory to put a wineprefix in (basically an install directory),\n\
                      must be an absolute path!\n\
   -t temp_dir     -- Path to temporary directory (where to store downloads).\n\
   -c              -- Clean install (delete old files before installing).\n\
+  -l logfile      -- Specify your own log file.\n\
   -h              -- Print this message and exit\n"
 FAIL_MESSAGE="${RED}Installation failed!${NC}\n\
   The file may be corrupt!\n\
