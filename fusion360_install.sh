@@ -27,7 +27,7 @@ FAIL_MESSAGE="${RED}Installation failed!${NC}\n\
   If you already tried that, check that you have the appropriate drivers installed.\n"
 
 ###########################################################
-## Functions                                             ##
+## Helper functions                                      ##
 ###########################################################
 packages_install() {
   printf "\n${GREEN}Updating the system and installing prerequisites!${NC}\n\n"
@@ -116,7 +116,7 @@ backup_launch_script() {
   chmod +x $INSTALLDIR/fusion360
 }
 
-install_end_message() {
+end_message() {
   printf "\n\n\n"
   printf "${GREEN}Fusion 360 has been installed!${NC}\n"
   printf "\n\n"
@@ -142,9 +142,12 @@ install_end_message() {
   printf "Done!\n"
 }
 
+###########################################################
+## Parse arguments                                       ##
+###########################################################
 get_variables() {
   # Parse additional arguments
-  while getopts "p:t:l:h" option; do
+  while getopts ":p:t:l:h" option; do
     case "${option}" in
       p) 
         INSTALLDIR=${OPTARG};;
@@ -194,6 +197,9 @@ get_variables() {
   printf "$INSTALLDIR\n$TEMPDIR\n$LOGDIR\n" > $INSTALLDIR/fusion360_uninstall_data.txt
 }
 
+###########################################################
+## Procedures                                            ##
+###########################################################
 install() {
   get_variables "$@"
 
@@ -216,21 +222,7 @@ install() {
   dxvk_install
   fusion360_install
   backup_launch_script
-  install_end_message
-}
-
-install_clean() {
-  get_variables "$@"
-
-  printf "Performing a clean install!\n"
-  rm -rf $INSTALLDIR $TEMPDIR $LOGDIR
-
-  packages_install
-  winetricks_install
-  dxvk_install
-  fusion360_install
-  backup_launch_script
-  install_end_message
+  end_message
 }
 
 uninstall() {
@@ -271,21 +263,24 @@ uninstall() {
     rm -rf "$file"
   done
   printf "${GREEN}Fusion 360 is now uninstalled!${NC}\n"
-  exit
 }
 
 ###########################################################
-## Parse Arguments                                       ##
+## Entry point                                           ##
 ###########################################################
 case "$1" in
   install)
     shift
-    install "$@";;
+    install "$@"
+    exit;;
   install-clean)
     shift
-    install_clean "$@";;
+    uninstall
+    install "$@"
+    exit;;
   uninstall)
-    uninstall;;
+    uninstall
+    exit;;
   -h)
     printf "${USAGE}\n"
     exit;;
