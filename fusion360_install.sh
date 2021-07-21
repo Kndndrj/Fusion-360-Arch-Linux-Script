@@ -14,13 +14,27 @@ GREEN="\033[1;32m"
 BROWN="\033[1;33m"
 BLUE="\033[1;34m"
 NC="\033[0m"
-USAGE="$0 [-p <wine_prefix>] [-t <temp_dir>] [-c] [-h] [-l <logfile>]\n\
-  -p wine_prefix  -- Path to directory to put a wineprefix in (basically an install directory),\n\
-                     must be an absolute path!\n\
-  -t temp_dir     -- Path to temporary directory (where to store downloads).\n\
-  -c              -- Clean install (delete old files before installing).\n\
-  -l logfile      -- Specify your own log file.\n\
-  -h              -- Print this message and exit\n"
+USAGE="$0 [command] [options]\n\
+  Commands:\n\
+    install [-p, -t, -l]:\n\
+      Downloads and installs Fusion 360 on your system.\n\
+      Uses wineprefix for installation, temporary directory for storing downloads\n\
+      and log directory for storing log files.\n\
+    install-clean [-p, -t, -l]:\n\
+      Uninstalls any found instances of Fusion 360 before downloading and installing.\n\
+      Uses wineprefix for installation, temporary directory for storing downloads\n\
+      and log directory for storing log files.\n\
+    download-only [-t]:\n\
+      Only downloads required packages for the installation.\n\
+      Uses temporary directory for storing downloads.\n\
+    uninstall:\n\
+      Uninstalls any found instances of Fusion 360 from the system.\n\n\
+  Options:\n\
+    -p <wine_prefix>  -- Path to directory to put a wineprefix in (basically an install directory),\n\
+                         must be an absolute path!\n\
+    -t <temp_dir>     -- Path to temporary directory (where to store downloads).\n\
+    -l <log_dir>      -- Specify your own log file.\n\
+    -h                -- Print this message and exit\n"
 FAIL_MESSAGE="${RED}Installation failed!${NC}\n\
   The file may be corrupt!\n\
   Please consider doing a clean install (use the \"-c\" flag).\n\
@@ -241,6 +255,9 @@ install() {
   printf "The first launch of the application is usually laggy when signing in, just be patient and it will work!\n"
   printf "${BROWN}Quirk${NC}: Sometimes the Fusion 360 logo gets stuck in the work area after launching,\n"
   printf "       to fix this, set your Graphics mode to OpenGL (User icon >> Preferences >> General >> Graphics driver) and restart the program.\n"
+  printf "\n\n"
+  printf "When launching an application, if you get an error window saying \"We ran into a serious problem\",\n"
+  printf "try rebooting before doing anything else. The driver updates might be the cause of this.\n"
   printf "\n\n"
 
   # Removing the temporary directory
