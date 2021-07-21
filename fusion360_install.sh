@@ -29,10 +29,10 @@ FAIL_MESSAGE="${RED}Installation failed!${NC}\n\
 ###########################################################
 ## Helper functions                                      ##
 ###########################################################
-packages_install() {
+install_prerequisites() {
   printf "\n${GREEN}Updating the system and installing prerequisites!${NC}\n\n"
 
-  sudo pacman -Syu wine wine-gecko wine-mono p7zip curl wget
+  sudo pacman --needed -Syu "$@"
   if [ $? -ne 0 ]; then
     printf "${RED}Required packages could not be installed!${NC}\n"
     printf "Please make sure that you have enabled the \"multilib\" repository for pacman!\n"
@@ -43,7 +43,7 @@ packages_install() {
   fi
 }
 
-winetricks_install() {
+download_packages() {
   # Download winetricks if it isn't in the temporary directory already
   if [ ! -e "$TEMPDIR/winetricks" ]; then
     printf "\n${BLUE}Downloading Winetricks!${NC}\n\n"
@@ -52,17 +52,6 @@ winetricks_install() {
     chmod +x $TEMPDIR/winetricks
   fi
 
-  # Run winetricks (automatically makes a prefix in $INSTALLDIR)
-  printf "\n${GREEN}Running Winetricks!${NC}\n\n"
-  WINEPREFIX=$INSTALLDIR $TEMPDIR/winetricks atmlib gdiplus msxml3 msxml6 vcrun2017 corefonts fontsmooth=rgb \
-                                             winhttp win10 | tee $LOGDIR/winetricks_setup.log
-  if [ $? -ne 0 ]; then
-    printf "$FAIL_MESSAGE"
-    exit 1
-  fi
-}
-
-dxvk_install() {
   # Download DXVK if it isn't in the temporary directory already
   if [ ! -e "$TEMPDIR/dxvk_extracted/setup_dxvk.sh" ]; then
     printf "\n${BLUE}Downloading DXVK!${NC}\n\n"
@@ -80,16 +69,6 @@ dxvk_install() {
     chmod +x $TEMPDIR/dxvk_extracted/setup_dxvk.sh
   fi
 
-  # Install "DXVK" in the wineprefix
-  printf "\n${GREEN}Installing DXVK!${NC}\n\n"
-  WINEPREFIX=$INSTALLDIR $TEMPDIR/dxvk_extracted/setup_dxvk.sh install | tee $LOGDIR/dxvk_setup.log
-  if [ $? -ne 0 ]; then
-    printf "$FAIL_MESSAGE"
-    exit 1
-  fi
-}
-
-fusion360_install() {
   # Download Fusion 360 if it isn't in the temporary directory already
   if [ ! -e "$TEMPDIR/setup/streamer.exe" ]; then
     printf "\n${BLUE}Downloading Fusion 360!${NC}\n\n"
@@ -98,6 +77,26 @@ fusion360_install() {
     # Download the installer and unzip to setup directory
     wget -P $TEMPDIR https://dl.appstreaming.autodesk.com/production/installers/Fusion%20360%20Admin%20Install.exe
     7z x -o$TEMPDIR/setup/ "$TEMPDIR/Fusion 360 Admin Install.exe"
+  fi
+
+}
+
+install_packages() {
+  # Run winetricks (automatically makes a prefix in $INSTALLDIR)
+  printf "\n${GREEN}Running Winetricks!${NC}\n\n"
+  WINEPREFIX=$INSTALLDIR $TEMPDIR/winetricks atmlib gdiplus msxml3 msxml6 vcrun2017 corefonts fontsmooth=rgb \
+                                             winhttp win10 | tee $LOGDIR/winetricks_setup.log
+  if [ $? -ne 0 ]; then
+    printf "$FAIL_MESSAGE"
+    exit 1
+  fi
+
+  # Install "DXVK" in the wineprefix
+  printf "\n${GREEN}Installing DXVK!${NC}\n\n"
+  WINEPREFIX=$INSTALLDIR $TEMPDIR/dxvk_extracted/setup_dxvk.sh install | tee $LOGDIR/dxvk_setup.log
+  if [ $? -ne 0 ]; then
+    printf "$FAIL_MESSAGE"
+    exit 1
   fi
 
   # Install Fusion 360
@@ -109,43 +108,17 @@ fusion360_install() {
   fi
 }
 
-backup_launch_script() {
+create_launch_script() {
   printf "env WINEPREFIX='$INSTALLDIR' wine C:\\windows\\command\\start.exe /Unix /$HOME/.fusion360/dosdevices/c:/ProgramData/Microsoft/Windows/Start\ Menu/Programs/Autodesk/Autodesk\ Fusion\ 360.lnk\n" > $INSTALLDIR/fusion360
   printf "#Sometimes the first command doesn't work and you need to launch it with this one:\n" >> $INSTALLDIR/fusion360
   printf "#env WINEPREFIX='$INSTALLDIR' wine '$INSTALLDIR/drive_c/Program Files/Autodesk/webdeploy/production/6a0c9611291d45bb9226980209917c3d/FusionLauncher.exe'\n" >> $INSTALLDIR/fusion360
   chmod +x $INSTALLDIR/fusion360
 }
 
-end_message() {
-  printf "\n\n\n"
-  printf "${GREEN}Fusion 360 has been installed!${NC}\n"
-  printf "\n\n"
-  printf "Wine should have automatically created a \".desktop\" file in ~/.local/share/applications/wine/Programs/Autodesk/\n"
-  printf "If that's not the case, a backup start script has been placed in $INSTALLDIR named \"fusion360\".\n"
-  printf "You can move this to somethere in your \$PATH for auto tab completion or just launch it from this directory\n"
-  printf "If you are having trouble with this app launcher, just open the file with a text editor and follow the instructions there\n"
-  printf "\n\n"
-  printf "The first launch of the application is usually laggy when signing in, just be patient and it will work!\n"
-  printf "${BROWN}Quirk${NC}: Sometimes the Fusion 360 logo gets stuck in the work area after launching,\n"
-  printf "       to fix this, set your Graphics mode to OpenGL (User icon >> Preferences >> General >> Graphics driver) and restart the program.\n"
-  printf "\n\n"
-
-  # Removing temporary directory
-  printf "One more thing. If the installation didn't go according to plan, you don't have to download all the files again if you keep the temporary directory.\n"
-  printf "Do you want to keep it (\"$TEMPDIR\")? [y/N] "
-  read answer
-  if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
-    printf "Removing $TEMPDIR!\n"
-    rm -rf $TEMPDIR
-  fi
-
-  printf "Done!\n"
-}
-
 ###########################################################
 ## Parse arguments                                       ##
 ###########################################################
-get_variables() {
+parse_arguments() {
   # Parse additional arguments
   while getopts ":p:t:l:h" option; do
     case "${option}" in
@@ -177,31 +150,41 @@ get_variables() {
   if [ -z "$LOGDIR" ]; then
     LOGDIR="$TEMPDIR/logs"
   fi
-
-  printf "Specified directories are:\n"
-  printf "Prefix directory:     $INSTALLDIR\n"
-  printf "Temporary directory:  $TEMPDIR\n"
-  printf "Log directory:        $LOGDIR\n"
-  printf "Continue with the installation? [y/N]"
-  read answer
-  if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
-    printf "Aborting install!\n"
-    exit 1
-  fi
-  # Make the required directories
-  mkdir -p $INSTALLDIR
-  mkdir -p $TEMPDIR
-  mkdir -p $LOGDIR
-
-  # Store directories in a file for uninstall
-  printf "$INSTALLDIR\n$TEMPDIR\n$LOGDIR\n" > $INSTALLDIR/fusion360_uninstall_data.txt
 }
 
 ###########################################################
 ## Procedures                                            ##
 ###########################################################
+download() {
+  parse_arguments "$@"
+
+  # Wait for conformation
+  printf "The files will be stored here:  $TEMPDIR\n"
+  printf "Continue? [y/N]"
+  read answer
+  if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
+    printf "Aborting!\n"
+    exit 1
+  fi
+
+  # Make the required directories
+  mkdir -p $TEMPDIR
+
+  install_prerequisites p7zip curl wget
+  download_packages
+
+  # Exit message
+  printf "${GREEN}Packages have been downloaded successfully!${NC}\n"
+  printf "All downloads have been stored in: $TEMPDIR\n\n"
+  printf "${BROWN}Tip${NC}: If you plan on installing, pass this as a temporary directory to the install script.\n"
+  printf "     E.g. \"fusion360_install.sh install -t $TEMPDIR\"\n"
+
+}
+
 install() {
-  get_variables "$@"
+  parse_arguments "$@"
+
+  printf "${BROWN}Start of installation${NC}\n"
 
   # Check if the $INSTALLDIR already exists
   if [ -d "$INSTALLDIR" ]; then
@@ -212,57 +195,109 @@ install() {
       printf "         Aborting install!\n"
       exit 1
     else
+      # Delete install directory, but preserve the previous uninstall data
       printf "         Moving on with the install!\n"
+      mv $INSTALLDIR/fusion360_uninstall_data.txt /tmp/ 2>/dev/null
       rm -rf $INSTALLDIR
+      mkdir -p $INSTALLDIR
+      mv /tmp/fusion360_uninstall_data.txt $INSTALLDIR/ 2>/dev/null
     fi
   fi
 
-  packages_install
-  winetricks_install
-  dxvk_install
-  fusion360_install
-  backup_launch_script
-  end_message
+  # Wait for conformation
+  printf "Specified directories are:\n"
+  printf "Prefix directory:     $INSTALLDIR\n"
+  printf "Temporary directory:  $TEMPDIR\n"
+  printf "Log directory:        $LOGDIR\n"
+  printf "Continue? [y/N]"
+  read answer
+  if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
+    printf "Aborting!\n"
+    exit 1
+  fi
+
+  # Make the required directories
+  mkdir -p $INSTALLDIR
+  mkdir -p $TEMPDIR
+  mkdir -p $LOGDIR
+
+  # Store directories in a file for uninstall
+  printf "$INSTALLDIR\n$TEMPDIR\n$LOGDIR\n" >> $INSTALLDIR/fusion360_uninstall_data.txt
+
+  install_prerequisites wine wine-gecko wine-mono p7zip curl wget
+  download_packages
+  install_packages
+  create_launch_script
+
+  # Exit message
+  printf "\n\n\n"
+  printf "${GREEN}Fusion 360 has been installed!${NC}\n"
+  printf "\n\n"
+  printf "Wine should have automatically created a \".desktop\" file in ~/.local/share/applications/wine/Programs/Autodesk/\n"
+  printf "If that's not the case, a backup start script has been placed in $INSTALLDIR named \"fusion360\".\n"
+  printf "You can move this to somethere in your \$PATH for auto tab completion or just launch it from this directory\n"
+  printf "If you are having trouble with this app launcher, just open the file with a text editor and follow the instructions there\n"
+  printf "\n\n"
+  printf "The first launch of the application is usually laggy when signing in, just be patient and it will work!\n"
+  printf "${BROWN}Quirk${NC}: Sometimes the Fusion 360 logo gets stuck in the work area after launching,\n"
+  printf "       to fix this, set your Graphics mode to OpenGL (User icon >> Preferences >> General >> Graphics driver) and restart the program.\n"
+  printf "\n\n"
+
+  # Removing the temporary directory
+  printf "One more thing. If the installation didn't go according to plan, you don't have to download all the files again if you keep the temporary directory.\n"
+  printf "Do you want to keep it (\"$TEMPDIR\")? [y/N] "
+  read answer
+  if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
+    printf "Removing $TEMPDIR!\n"
+    rm -rf $TEMPDIR
+  fi
+
+  printf "Done!\n"
 }
 
 uninstall() {
+  printf "${BROWN}Uninstalling packages${NC}\n"
+
   # Find the uninstall file
   uninstall_file="$(find $HOME/ -name "fusion360_uninstall_data.txt" -type f 2>/dev/null)"
   num_of_uninstalls=$(printf "$uninstall_file\n" | wc -l)
 
   if [ -z "$uninstall_file" ]; then
     printf "It seems that you don't have Fusion 360 installed on your system!\n"
-    exit 1
+    return
   fi
 
   # If there are more than one "fusion360_uninstall_data.txt" found, let the user choose.
   if [ $num_of_uninstalls -gt 1 ]; then
     printf "More than one instance of fusion360 found.\n"
-    printf "$uninstall_file\n" | nl
-    printf "Which one do you want to remove? [1-]\n"
+    printf "$(dirname $uninstall_file)\n" | nl
+    printf "Which one do you want to remove? [1-$num_of_uninstalls] [0 - remove all] "
     read answer
-    if [ $answer -gt $num_of_uninstalls ] || [ $answer -lt 1 ]; then
+    if [ $answer -gt $num_of_uninstalls ] || [ $answer -lt 0 ]; then
       printf "Not a valid choice! Try uninstalling again.\n"
       exit 1
     fi
-    uninstall_file=$(printf "$uninstall_file\n" | sed -n ${answer}p)
+    # If answer equals 0 then all choices will be deleted
+    if [ $answer -ne 0 ]; then
+      uninstall_file=$(printf "$uninstall_file\n" | sed -n ${answer}p)
+    fi
   fi
 
   printf "The following directories will be removed:\n"
-  cat $uninstall_file
+  sort $uninstall_file | uniq
   printf "Continue? [y/N] "
   read answer
   if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
-    printf "Aborting uninstallation!\n"
+    printf "Aborting!\n"
     exit 1
   fi
 
   # Remove the files
-  for file in $(cat $uninstall_file); do
-    printf "Removed file: $file"
+  for file in $(sort $uninstall_file | uniq); do
+    printf "Removed file: $file\n"
     rm -rf "$file"
   done
-  printf "${GREEN}Fusion 360 is now uninstalled!${NC}\n"
+  printf "\n\n${GREEN}Fusion 360 is now uninstalled!${NC}\n"
 }
 
 ###########################################################
@@ -278,6 +313,10 @@ case "$1" in
     uninstall
     install "$@"
     exit;;
+  download-only)
+    shift
+    download "$@"
+    exit;;
   uninstall)
     uninstall
     exit;;
@@ -286,6 +325,7 @@ case "$1" in
     exit;;
   *)
     printf "Invalid usage: $0 $1\n"
-    printf "Only use \"$0 install\", \"$0 install-clean\" or \"$0 uninstall\"\n"
+    printf "Only use one of theese:\n"
+    printf "\"$0 install\"\n\"$0 install-clean\"\n\"$0 download-only\"\n\"$0 uninstall\"\n"
     exit 1
 esac
