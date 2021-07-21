@@ -34,7 +34,8 @@ USAGE="$0 [command] [options]\n\
                          must be an absolute path!\n\
     -t <temp_dir>     -- Path to temporary directory (where to store downloads).\n\
     -l <log_dir>      -- Specify your own log file.\n\
-    -h                -- Print this message and exit\n"
+    -h                -- Print this message and exit\n\n\
+    For more information, check README.md at \"https://github.com/Kndndrj/Fusion-360-Arch-Linux-Script\""
 FAIL_MESSAGE="${RED}Installation failed!${NC}\n\
   The file may be corrupt!\n\
   Please consider doing a clean install (use the \"-c\" flag).\n\
@@ -59,7 +60,7 @@ install_prerequisites() {
 
 download_packages() {
   # Download winetricks if it isn't in the temporary directory already
-  if [ ! -e "$TEMPDIR/winetricks" ]; then
+  if [ ! -x "$TEMPDIR/winetricks" ]; then
     printf "\n${BLUE}Downloading Winetricks!${NC}\n\n"
     # Download
     wget -P "$TEMPDIR" "https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks"
@@ -67,7 +68,7 @@ download_packages() {
   fi
 
   # Download DXVK if it isn't in the temporary directory already
-  if [ ! -e "$TEMPDIR/dxvk_extracted/setup_dxvk.sh" ]; then
+  if [ ! -x "$TEMPDIR/dxvk_extracted/setup_dxvk.sh" ]; then
     printf "\n${BLUE}Downloading DXVK!${NC}\n\n"
     # If this file is already downloaded, delete it (might be corrupt)
     rm -rf "$TEMPDIR/DXVK.tar.gz"
@@ -98,8 +99,8 @@ download_packages() {
 install_packages() {
   # Run winetricks (automatically makes a prefix in $INSTALLDIR)
   printf "\n${GREEN}Running Winetricks!${NC}\n\n"
-  WINEPREFIX=$INSTALLDIR $TEMPDIR/winetricks atmlib gdiplus msxml3 msxml6 vcrun2017 corefonts fontsmooth=rgb \
-                                             winhttp win10 | tee $LOGDIR/winetricks_setup.log
+  WINEPREFIX=$INSTALLDIR $TEMPDIR/winetricks atmlib gdiplus msxml3 msxml6 vcrun2017 corefonts \
+                                             fontsmooth=rgb winhttp win10 | tee $LOGDIR/winetricks_setup.log
   if [ $? -ne 0 ]; then
     printf "$FAIL_MESSAGE"
     exit 1
@@ -123,9 +124,9 @@ install_packages() {
 }
 
 create_launch_script() {
-  printf "env WINEPREFIX='$INSTALLDIR' wine C:\\windows\\command\\start.exe /Unix /$HOME/.fusion360/dosdevices/c:/ProgramData/Microsoft/Windows/Start\ Menu/Programs/Autodesk/Autodesk\ Fusion\ 360.lnk\n" > $INSTALLDIR/fusion360
+  printf "env WINEPREFIX='$INSTALLDIR' wine '$INSTALLDIR/drive_c/Program Files/Autodesk/webdeploy/production/6a0c9611291d45bb9226980209917c3d/FusionLauncher.exe'\n" >> $INSTALLDIR/fusion360
   printf "#Sometimes the first command doesn't work and you need to launch it with this one:\n" >> $INSTALLDIR/fusion360
-  printf "#env WINEPREFIX='$INSTALLDIR' wine '$INSTALLDIR/drive_c/Program Files/Autodesk/webdeploy/production/6a0c9611291d45bb9226980209917c3d/FusionLauncher.exe'\n" >> $INSTALLDIR/fusion360
+  printf "#env WINEPREFIX='$INSTALLDIR' wine C:\\windows\\command\\start.exe /Unix /$HOME/.fusion360/dosdevices/c:/ProgramData/Microsoft/Windows/Start\ Menu/Programs/Autodesk/Autodesk\ Fusion\ 360.lnk\n" > $INSTALLDIR/fusion360
   chmod +x $INSTALLDIR/fusion360
 }
 
@@ -174,7 +175,7 @@ download() {
 
   # Wait for conformation
   printf "The files will be stored here:  $TEMPDIR\n"
-  printf "Continue? [y/N]"
+  printf "Continue? [y/N] "
   read answer
   if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
     printf "Aborting!\n"
@@ -190,8 +191,6 @@ download() {
   # Exit message
   printf "${GREEN}Packages have been downloaded successfully!${NC}\n"
   printf "All downloads have been stored in: $TEMPDIR\n\n"
-  printf "${BROWN}Tip${NC}: If you plan on installing, pass this as a temporary directory to the install script.\n"
-  printf "     E.g. \"fusion360_install.sh install -t $TEMPDIR\"\n"
 
 }
 
@@ -223,7 +222,7 @@ install() {
   printf "Prefix directory:     $INSTALLDIR\n"
   printf "Temporary directory:  $TEMPDIR\n"
   printf "Log directory:        $LOGDIR\n"
-  printf "Continue? [y/N]"
+  printf "Continue? [y/N] "
   read answer
   if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
     printf "Aborting!\n"
@@ -244,24 +243,13 @@ install() {
   create_launch_script
 
   # Exit message
-  printf "\n\n\n"
-  printf "${GREEN}Fusion 360 has been installed!${NC}\n"
-  printf "\n\n"
-  printf "Wine should have automatically created a \".desktop\" file in ~/.local/share/applications/wine/Programs/Autodesk/\n"
-  printf "If that's not the case, a backup start script has been placed in $INSTALLDIR named \"fusion360\".\n"
-  printf "You can move this to somethere in your \$PATH for auto tab completion or just launch it from this directory\n"
-  printf "If you are having trouble with this app launcher, just open the file with a text editor and follow the instructions there\n"
-  printf "\n\n"
-  printf "The first launch of the application is usually laggy when signing in, just be patient and it will work!\n"
-  printf "${BROWN}Quirk${NC}: Sometimes the Fusion 360 logo gets stuck in the work area after launching,\n"
-  printf "       to fix this, set your Graphics mode to OpenGL (User icon >> Preferences >> General >> Graphics driver) and restart the program.\n"
-  printf "\n\n"
-  printf "When launching an application, if you get an error window saying \"We ran into a serious problem\",\n"
-  printf "try rebooting before doing anything else. The driver updates might be the cause of this.\n"
-  printf "\n\n"
+  printf "\n\n\n${GREEN}Fusion 360 has been installed!${NC}\n"
+  printf "\n\nWine should have automatically created a \".desktop\" file in ~/.local/share/applications/wine/Programs/Autodesk/\n"
+  printf "If that's not the case, check \"help\" (-h flag).\n\n"
 
   # Removing the temporary directory
-  printf "One more thing. If the installation didn't go according to plan, you don't have to download all the files again if you keep the temporary directory.\n"
+  printf "One more thing. If the installation didn't go according to plan,\n"
+  printf "you don't have to download all the files again if you keep the temporary directory.\n"
   printf "Do you want to keep it (\"$TEMPDIR\")? [y/N] "
   read answer
   if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
@@ -290,7 +278,9 @@ uninstall() {
     printf "$(dirname $uninstall_file)\n" | nl
     printf "Which one do you want to remove? [1-$num_of_uninstalls] [0 - remove all] "
     read answer
-    if [ $answer -gt $num_of_uninstalls ] || [ $answer -lt 0 ]; then
+    if [ $answer -gt $num_of_uninstalls ] 2>/dev/null || \
+       [ $answer -lt 0 ] 2>/dev/null || \
+       ! [ "$answer" -eq "$answer" ] 2>/dev/null; then
       printf "Not a valid choice! Try uninstalling again.\n"
       exit 1
     fi
