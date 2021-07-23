@@ -182,10 +182,11 @@ download() {
     exit 1
   fi
 
-  # Make the required directories
+  install_prerequisites p7zip curl wget
+
+  # Make the download directory
   mkdir -p $TEMPDIR
 
-  install_prerequisites p7zip curl wget
   download_packages
 
   # Exit message
@@ -229,16 +230,20 @@ install() {
     exit 1
   fi
 
-  # Make the required directories
-  mkdir -p $INSTALLDIR
+  install_prerequisites wine wine-gecko wine-mono cabextract p7zip curl wget
+
+  # Make the download directory
   mkdir -p $TEMPDIR
+
+  download_packages
+
+  # Make the other directories
+  mkdir -p $INSTALLDIR
   mkdir -p $LOGDIR
 
   # Store directories in a file for uninstall
   printf "$INSTALLDIR\n$TEMPDIR\n$LOGDIR\n" >> $INSTALLDIR/fusion360_uninstall_data.txt
 
-  install_prerequisites wine wine-gecko wine-mono p7zip curl wget
-  download_packages
   install_packages
   create_launch_script
 
