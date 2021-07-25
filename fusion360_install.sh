@@ -230,7 +230,7 @@ install() {
     exit 1
   fi
 
-  install_prerequisites wine wine-gecko wine-mono cabextract p7zip curl wget
+  install_prerequisites wine wine-gecko wine-mono lib32-gnutls gnutls cabextract p7zip curl wget
 
   # Make the download directory
   mkdir -p $TEMPDIR
