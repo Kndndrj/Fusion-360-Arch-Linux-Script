@@ -1,5 +1,5 @@
 # Install Fusion 360 on Arch Linux
-[![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow?style=for-the-badge)](https://opensource.org/licenses/) [![Wine - 6.13-1](https://img.shields.io/badge/Wine-6.13--1-red?style=for-the-badge)](https://www.winehq.org/) [![DXVK - v1.9](https://img.shields.io/badge/DXVK-v1.9-2ea44f?style=for-the-badge)](https://github.com/doitsujin/dxvk) [![winetricks - 20210206-next](https://img.shields.io/badge/winetricks-20210206--next-2ea44f?style=for-the-badge)](https://github.com/Winetricks/winetricks) [![Fusion 360 - 2.0.10446](https://img.shields.io/badge/Fusion_360-2.0.10446-orange?style=for-the-badge)](https://www.autodesk.com/products/fusion-360/overview)
+[![Wine - 6.13-1](https://img.shields.io/badge/Wine-6.13--1-red?style=for-the-badge)](https://www.winehq.org/) [![DXVK - v1.9](https://img.shields.io/badge/DXVK-v1.9-2ea44f?style=for-the-badge)](https://github.com/doitsujin/dxvk) [![winetricks - 20210206-next](https://img.shields.io/badge/winetricks-20210206--next-2ea44f?style=for-the-badge)](https://github.com/Winetricks/winetricks) [![Fusion 360 - 2.0.10446](https://img.shields.io/badge/Fusion_360-2.0.10446-orange?style=for-the-badge)](https://www.autodesk.com/products/fusion-360/overview)
 
 A script for installing Fusion 360 on Arch Linux through WINE.
 
@@ -30,16 +30,6 @@ Alternatively you can just clone the git repository.
 For a simple installation, just run:
 ```sh
 ./fusion360_install.sh install
-```
-#### Install on a Different Computer
-If you only want to download the necessary files and install the program on
-another system (maybe it has slow internet), you can run:
-```sh
-./fusion360_install.sh download-only -t ~/Downloads/fusion_install_files
-```
-Then transfer this directory to a new computer, where you can use:
-```sh
-./fusion360_install.sh install -t "previously/saved/directory"
 ```
 #### Custom Install Directory
 If you want to specify your own install directory and a directory to store

@@ -24,9 +24,6 @@ USAGE="$0 [command] [options]\n\
       Uninstalls any found instances of Fusion 360 before downloading and installing.\n\
       Uses wineprefix for installation, temporary directory for storing downloads\n\
       and log directory for storing log files.\n\
-    download-only [-t]:\n\
-      Only downloads required packages for the installation.\n\
-      Uses temporary directory for storing downloads.\n\
     uninstall:\n\
       Uninstalls any found instances of Fusion 360 from the system.\n\n\
   Options:\n\
@@ -38,7 +35,7 @@ USAGE="$0 [command] [options]\n\
     For more information, check README.md at \"https://github.com/Kndndrj/Fusion-360-Arch-Linux-Script\""
 FAIL_MESSAGE="${RED}Installation failed!${NC}\n\
   The file may be corrupt!\n\
-  Please consider doing a clean install (use the \"-c\" flag).\n\
+  Please consider doing a clean install.\n\
   If you already tried that, check that you have the appropriate drivers installed.\n"
 
 ###########################################################
@@ -170,31 +167,6 @@ parse_arguments() {
 ###########################################################
 ## Procedures                                            ##
 ###########################################################
-download() {
-  parse_arguments "$@"
-
-  # Wait for conformation
-  printf "The files will be stored here:  $TEMPDIR\n"
-  printf "Continue? [y/N] "
-  read answer
-  if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
-    printf "Aborting!\n"
-    exit 1
-  fi
-
-  install_prerequisites p7zip curl wget
-
-  # Make the download directory
-  mkdir -p $TEMPDIR
-
-  download_packages
-
-  # Exit message
-  printf "${GREEN}Packages have been downloaded successfully!${NC}\n"
-  printf "All downloads have been stored in: $TEMPDIR\n\n"
-
-}
-
 install() {
   parse_arguments "$@"
 
@@ -325,10 +297,6 @@ case "$1" in
     uninstall
     install "$@"
     exit;;
-  download-only)
-    shift
-    download "$@"
-    exit;;
   uninstall)
     uninstall
     exit;;
@@ -338,6 +306,6 @@ case "$1" in
   *)
     printf "Invalid usage: $0 $1\n"
     printf "Only use one of theese:\n"
-    printf "\"$0 install\"\n\"$0 install-clean\"\n\"$0 download-only\"\n\"$0 uninstall\"\n"
+    printf "\"$0 install\"\n\"$0 install-clean\"\n\"$0 uninstall\"\n"
     exit 1
 esac
