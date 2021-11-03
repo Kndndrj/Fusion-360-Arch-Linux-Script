@@ -1,5 +1,15 @@
 # Install Fusion 360 on Arch Linux
-[![Wine - 6.13-1](https://img.shields.io/badge/Wine-6.13--1-red?style=for-the-badge)](https://www.winehq.org/) [![DXVK - v1.9](https://img.shields.io/badge/DXVK-v1.9-2ea44f?style=for-the-badge)](https://github.com/doitsujin/dxvk) [![winetricks - 20210206-next](https://img.shields.io/badge/winetricks-20210206--next-2ea44f?style=for-the-badge)](https://github.com/Winetricks/winetricks) [![Fusion 360 - 2.0.10446](https://img.shields.io/badge/Fusion_360-2.0.10446-orange?style=for-the-badge)](https://www.autodesk.com/products/fusion-360/overview)
+
+# IMPORTANT
+
+The script was modified to support multiple program installs and the project was moved to [wiener](https://github.com/kndndrj/wiener).
+To install Fusion 360, go to the mentioned repository and follow the instructions there!
+The specific install command is the following:
+```sh
+./wiener.sh fusion360 install
+```
+
+# DEPRECATED
 
 A script for installing Fusion 360 on Arch Linux through WINE.
 
